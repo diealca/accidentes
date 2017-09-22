@@ -5,8 +5,14 @@
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="">
+    
+    <!--Code review - Arturo Polo
+    Una sugerencia para la descripción de tu pagina, además de algunos keyword para la identificación de la misma
+    -->
+    <meta name="description" content="Peligro en las calles de Bogot&aacute">
+    <meta name="keywords" content="Peligro, Bogot&aacute, Tr&aacutensito, Horas, Seguridad">
     <meta name="author" content="">
+
 
     <title>Peligro en las Calles de Bogotá</title>
 
@@ -57,8 +63,39 @@
     <script src="vendor/bootstrap/js/bootstrap.min.js"></script>
     
     <script src="https://d3js.org/d3.v4.min.js"></script>
+    
+    <!-- Code review - Arturo Polo
+    	1. ALISTAMIENTO DEL DATASET
+      Podrías haber agrupado el dataset previamente contando por horas por fecha.
+      De esta manera no tendrías intervalos sino 24 registros a lo sumo por día.
+
+      2. LECTURA DEL DATASET
+    	Podrías almacenar todos estos datos dentro de un archivo CSV aparte de la forma:
+    	Fecha,RangoHora,Ocurrencias
+    	21/02/2010,2,3
+    	21/04/2010,18,5
+		  03/12/2010,4,6
+		
+		  Posteriormente usas el siguiente código para leer los datos desde el mismo archivo
+		  <script>
+       d3.csv("data.csv", function(error, myData){
+         if (error) throw error;
+
+         myData.forEach(function(d){
+           d.hora = +d.hora;
+           d.ocurrencias = +d.ocurrencias
+         });
+
+         var width = 400,
+    		 height = 400,
+			   r = 3,
+			   .
+			   .
+        			 .
+      </script>
+    -->	
     <script>
-        var myData = [
+    	var myData = [
             {fecha:"21/02/2010",hora:2.75},
 {fecha:"21/04/2010",hora:18.5},
 {fecha:"03/12/2010",hora:4.5},
@@ -2303,20 +2340,15 @@
 
         var width = 400,
             height = 400,
-        r = 3,
-        margin = {top:20 , left:40, right:20, bottom:50},
-        yScale = d3.scaleLinear()
-            .range([height - margin.top - margin.bottom, 0]), 
-        widthScale = d3.scaleLinear()
-            .range([0, width - margin.left - margin.right])
-        colorScale = d3.scaleOrdinal()
-            .range(d3.schemeCategory20);
-
-
+            r = 3,
+            margin = {top:20 , left:40, right:20, bottom:50},
+            yScale = d3.scaleLinear().range([height - margin.top - margin.bottom, 0]), 
+            widthScale = d3.scaleLinear().range([0, width - margin.left - margin.right]),
+            colorScale = d3.scaleOrdinal().range(d3.schemeCategory20);
 
         var chart = d3.select("#chart")
-            .append("svg")
-        .attr("width", width)
+                      .append("svg")
+                      .attr("width", width)
         .attr("height", height)
         .append("g")
             .attr("transform", "translate("+ margin.left+"," + margin.top + ")" );
@@ -2342,47 +2374,73 @@
             .style("text-anchor", "middle")
             .text("Día de la semana");
         
+        /*Code review - Arturo Polo
+        Bastante recursiva la forma en que leíste la fecha para obtener el número del día de la semana.
+        */
         function dayOfW(fecha){
             var parts = fecha.split("/");
             var dateObj = new Date(parts[2], parts[1]-1, parts[0]);
             return dateObj.getDay()+1;
         }
+
         function update(myData) {
-            widthScale.domain([0, d3.max(myData, function (d) {  return dayOfW(d.fecha); })]);
+
+
+            /*Code review - Arturo Polo
+            Hubiera sido mejor usar una visualización tipo HeatMap para este propósito con el objetivo de evidenciar
+            que día de la semana ocurren más o menos accidentes de tránsito en Bogotá. En el eje Y una variable Ordinal     (hora) y en el eje X una variable categórica (el día de la semana).
+
+            La definición del dominio del eje X pasaría de ser un ScaleLinear a ser un scaleBand. El objetivo sería 
+            tener una escala de Lunes a Viernes en vez de una de 0 a 7. La definición del rango sería de la siguiente forma;
+
+                widthScale = d3.scaleBand().rangeRound([0, width - margin.left - margin.right]).padding(0.1)
+
+            La definición del dominio sería de la siguiente forma:
+
+                widthScale.domain(myData.map(function(d) { return dayOfW(d.fecha); }));
+      
+            Podría usar una la siguiente función de Java Script para recuperar el nombre del día de la semana y no
+            el número del día de la semana.
+              function dayOfW(fecha){
+                var parts = fecha.split("/");
+                var dateObj = new Date(parts[2], parts[1]-1, parts[0]);
+                var days = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+                return days[dateObj.getDay()+1];
+              }            
+            */          
+            widthScale.domain([0, d3.max(myData, function (d) { return dayOfW(d.fecha); })]);
             yScale.domain([0, d3.max(myData, function (d) { return d.hora; })]);
 
-        var rects = chart.selectAll(".point")
-            .data(myData);
+        
+            var rects = chart.selectAll(".point").data(myData);
             
-        //Create
             rects.enter()
-            .append("circle")
-            .attr("class", "point") // enter
-            .merge(rects) // enter + update
-                .style("fill", "red")
-                .style("opacity", 0.1)
+                 .append("circle")
+                 .attr("class", "point") // enter
+                 .merge(rects) // enter + update
+                 .style("fill", "red")
+                 .style("opacity", 0.1)
+                 .attr("r", r)
+                 .attr("cy", function (d, i) {	return yScale(d.hora); })
+                 .attr("cx", function (d) { return widthScale(dayOfW(d.fecha)); });
             
-            .attr("r", r)
-            .attr("cy", function (d, i) {	
-                return yScale(d.hora);
-            })
-            .attr("cx", function (d) {
-                return widthScale(dayOfW(d.fecha));
-            });
-            
-        //Remove
-        rects.exit()
-            .remove();
+            //Remove
+            rects.exit()
+                .remove();
         
         
-        xAxis.call(d3.axisBottom(widthScale));
-        yAxis.call(d3.axisLeft(yScale));
+            /*
+            Code review - Arturo Polo
+            Para evitar que te aparezcan decimales en el eje X en la visualización que diseñó, los cuales resultan bastante confusos ya que se tratan de días de la semana, podrías usar algo como la función TICKS para acotar el número de divisiones sobre el eje X y el formato de estas.
+
+              xAxis.call(d3.axisBottom(widthScale).ticks(7).tickFormat(d3.format(".0s")));
+            */
+            xAxis.call(d3.axisBottom(widthScale));
+            yAxis.call(d3.axisLeft(yScale))
         }	
 
         update(myData);
     </script>
-    
-    
 
   </body>
 
